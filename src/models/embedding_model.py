@@ -107,7 +107,7 @@ class ClipEmbeddingModel(BaseEmbeddingModel):
             If the model is not loaded or invalid input is provided.
         """
         if not self._is_loaded:
-            raise ValueError("Model must be loaded before generating embeddings")
+            self.ensure_model_loaded()
 
         if type == "text":
             if not text:
@@ -145,9 +145,11 @@ class ClipEmbeddingModel(BaseEmbeddingModel):
 
             # Generate embedding
             with torch.no_grad():
-                text_features = self.model.get_text_features(
-                    processed["input_ids"], normalize=True
-                )
+                text_kwargs = {"normalize": True}
+                text_kwargs["input_ids"] = processed["input_ids"]
+                if "attention_mask" in processed:
+                    text_kwargs["attention_mask"] = processed["attention_mask"]
+                text_features = self.model.get_text_features(**text_kwargs)
                 embedding = text_features.cpu().numpy()[0].tolist()
 
             return embedding
@@ -273,7 +275,7 @@ class SentenceTransformerEmbeddingModel(BaseEmbeddingModel):
             If the model is not loaded or invalid input is provided.
         """
         if not self._is_loaded:
-            raise ValueError("Model must be loaded before generating embeddings")
+            self.ensure_model_loaded()
 
         if type != "text":
             raise ValueError("Sentence Transformer only supports text embeddings")
