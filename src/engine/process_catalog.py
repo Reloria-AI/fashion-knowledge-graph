@@ -6,11 +6,14 @@ from typing import Dict, List, Optional
 import pandas as pd
 from loguru import logger
 from tqdm import tqdm
+from dotenv import load_dotenv
 
 from src.database.graph_database import GraphDatabaseHandler
 from src.database.vector_database import VectorDatabase
 from src.models.model_manager import image_processor
 
+# Load .env values for local/script execution
+load_dotenv()
 
 def process_catalog(
     catalog_df: pd.DataFrame,
@@ -103,8 +106,14 @@ def main():
         user=os.getenv("NEO4J_USERNAME", "neo4j"),
         password=os.getenv("NEO4J_PASSWORD"),
     )
-    # Load catalog data
-    catalog_df = pd.read_csv("output/data/catalog8_gq.csv")
+    # Load catalog data (allow override via env var)
+    catalog_csv_path = os.getenv("CATALOG_CSV_PATH", "output/data/catalog_combined.csv")
+    if not os.path.exists(catalog_csv_path):
+        raise FileNotFoundError(
+            f"Catalog CSV not found at '{catalog_csv_path}'. "
+            "Set CATALOG_CSV_PATH to a valid file."
+        )
+    catalog_df = pd.read_csv(catalog_csv_path)
     catalog_df["product_id"] = catalog_df["product_id"].astype(str)
     process_catalog(catalog_df, vector_db_image, vector_db_style, graph_db)
 

@@ -3,12 +3,15 @@ import pandas as pd
 from typing import Dict, List, Optional, Any
 
 from tqdm import tqdm
+from dotenv import load_dotenv
 
 from src.database.graph_database import GraphDatabaseHandler
 from src.database.vector_database import VectorDatabase
 from src.models.model_manager import image_processor
 from loguru import logger
 
+# Load .env values for local/script execution
+load_dotenv()
 
 def process_social_media_images(
     image_paths: Optional[List[str]] = None,
