@@ -101,7 +101,7 @@ class SegmentationModel(BaseSegmentationModel):
             If the model is not loaded or the image is invalid.
         """
         if not self._is_loaded:
-            raise ValueError("Model must be loaded before segmentation")
+            self.ensure_model_loaded()
 
         if image is None:
             raise ValueError("Input image cannot be None")
@@ -117,6 +117,14 @@ class SegmentationModel(BaseSegmentationModel):
             with torch.no_grad():
                 outputs = self.model(**inputs)
                 logits = outputs.logits
+
+            # Upsample logits to original image resolution for stable masks
+            logits = torch.nn.functional.interpolate(
+                logits,
+                size=image.size[::-1],  # image.size -> (W, H), tensors expect (H, W)
+                mode="bilinear",
+                align_corners=False,
+            )
 
             # Get the predicted segmentation mask
             predicted_mask = torch.argmax(logits, dim=1)
@@ -143,7 +151,7 @@ class SegmentationModel(BaseSegmentationModel):
             List of segmentation mask tensors.
         """
         if not self._is_loaded:
-            raise ValueError("Model must be loaded before segmentation")
+            self.ensure_model_loaded()
 
         if not images:
             return []
@@ -159,6 +167,16 @@ class SegmentationModel(BaseSegmentationModel):
             with torch.no_grad():
                 outputs = self.model(**inputs)
                 logits = outputs.logits
+
+            # Resize to the first image shape if all images share dimensions.
+            # This keeps behavior deterministic for downstream area filtering.
+            first_size = images[0].size[::-1]
+            logits = torch.nn.functional.interpolate(
+                logits,
+                size=first_size,
+                mode="bilinear",
+                align_corners=False,
+            )
 
             # Get predicted masks for each image
             predicted_masks = torch.argmax(logits, dim=1)

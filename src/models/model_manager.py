@@ -54,6 +54,9 @@ class ModelManager:
         - Attribute extraction model for product attributes
         - Image processor for orchestration
         """
+        if self._models and self._image_processor is not None:
+            return
+
         try:
             logger.info("Initializing all models...")
 
@@ -106,7 +109,8 @@ class ModelManager:
 
             for name, model in self._models.items():
                 logger.info(f"Loading {name} model...")
-                model.ensure_model_loaded()
+                if hasattr(model, "ensure_model_loaded"):
+                    model.ensure_model_loaded()
 
             logger.info("All models loaded successfully")
 
@@ -133,6 +137,9 @@ class ModelManager:
         KeyError
             If the model name is not found.
         """
+        if not self._models:
+            self.initialize_models()
+
         if model_name not in self._models:
             available_models = list(self._models.keys())
             raise KeyError(
@@ -163,6 +170,8 @@ class ModelManager:
     @property
     def image_processor(self):
         """Get the image processor."""
+        if not self._models:
+            self.initialize_models()
         if self._image_processor is None:
             raise RuntimeError(
                 "Image processor not initialized. Call initialize_models() first."
@@ -254,7 +263,6 @@ def get_image_processor():
 # Initialize models for backward compatibility
 try:
     model_manager.initialize_models()
-    model_manager.load_all_models()
 
     # Create convenience variables
     segmentation_model = model_manager.segmentation_model
